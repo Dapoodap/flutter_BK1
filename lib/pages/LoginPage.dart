@@ -29,7 +29,7 @@ class LoginPageState extends State<LoginPage> {
         email: email!, password: password!);
         print("berhasil login");
     Navigator.pushNamedAndRemoveUntil(
-        context, '/register', ModalRoute.withName('/register'));
+        context, '/dashboard', ModalRoute.withName('/dashboard'));
   } catch (e) {
     final snackbar = SnackBar(content: Text(e.toString()));
     ScaffoldMessenger.of(context).showSnackBar(snackbar);
