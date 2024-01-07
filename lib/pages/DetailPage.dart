@@ -5,9 +5,11 @@ import 'package:lapor_book/component/styles.dart';
 import 'package:lapor_book/model/Akun.dart';
 import 'package:lapor_book/model/Laporan.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DetailPage extends StatefulWidget {
-  DetailPage({super.key});
+  DetailPage({Key? key}) : super(key: key);
+
   @override
   State<StatefulWidget> createState() => _DetailPageState();
 }
@@ -15,15 +17,22 @@ class DetailPage extends StatefulWidget {
 class _DetailPageState extends State<DetailPage> {
   bool _isLoading = false;
   String? status;
+  bool isLiked = false; // Added to track the like state
+  late Laporan laporan;
+  late Akun akun;
+  
 
-  Future launch(String uri) async {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  
+
+  Future<void> launch(String uri) async {
     if (uri == '') return;
     if (!await launchUrl(Uri.parse(uri))) {
       throw Exception('Tidak dapat memanggil : $uri');
     }
   }
 
-  void statusDialog(Laporan laporan) {
+  void statusDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -34,18 +43,37 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
+  void updateLike() async {
+    final String UserId =akun.uid;
+    try {
+      // Increment likes in the local object
+      laporan.incrementLike();
+
+      // Update the 'like' field in the Firestore document
+      await _firestore
+          .collection('laporan')
+          .doc(laporan.docId)
+          .update({'like': laporan.like,'likedBy':FieldValue.arrayUnion([UserId])});
+          
+    } catch (e) {
+      print('Error updating like: $e');
+      // Handle error accordingly
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final arguments =
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
 
-    Laporan laporan = arguments['laporan'];
-    Akun akun = arguments['akun'];
+    laporan = arguments['laporan'];
+    akun = arguments['akun'];
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: primaryColor,
-        title: Text('Detail Laporan', style: headerStyle(level: 3, dark: false)),
+        title:
+            Text('Detail Laporan', style: headerStyle(level: 3, dark: false)),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -74,11 +102,14 @@ class _DetailPageState extends State<DetailPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           laporan.status == 'Posted'
-                              ? textStatus('Posted', Colors.yellow, Colors.black)
+                              ? textStatus(
+                                  'Posted', Colors.yellow, Colors.black)
                               : laporan.status == 'Process'
-                                  ? textStatus('Process', Colors.green, Colors.white)
+                                  ? textStatus(
+                                      'Process', Colors.green, Colors.white)
                                   : textStatus('Done', Colors.blue, Colors.white),
-                          textStatus(laporan.instansi, Colors.white, Colors.black),
+                          textStatus(
+                              laporan.instansi, Colors.white, Colors.black),
                         ],
                       ),
                       const SizedBox(height: 20),
@@ -115,6 +146,38 @@ class _DetailPageState extends State<DetailPage> {
                         child: Text(laporan.deskripsi ?? ''),
                       ),
                       SizedBox(height: 20),
+
+                      // Like button
+                      if(!laporan.likedBy!.contains(akun.uid))
+                      ElevatedButton(
+                        onPressed: () {
+                          // Toggle the like state
+                          setState(() {
+                            isLiked = !isLiked;
+                          });
+
+                          // Increment likes and update in the database
+                          updateLike();
+                          print(laporan.like);
+
+                          // Implement your logic for handling likes here
+                          // For example, you can update the like count in the database
+                          // and then update the UI
+                          // You may use the setState method to rebuild the UI
+                        },
+                        style: ElevatedButton.styleFrom(
+                          primary: isLiked ? Colors.red : Colors.grey,
+                          // Change button color based on like state
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: Text(
+                          isLiked ? 'Liked' : 'Like',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+
                       if (akun.role == 'admin')
                         Container(
                           width: 250,
@@ -123,7 +186,7 @@ class _DetailPageState extends State<DetailPage> {
                               setState(() {
                                 status = laporan.status;
                               });
-                              statusDialog(laporan);
+                              statusDialog();
                             },
                             style: TextButton.styleFrom(
                               foregroundColor: Colors.white,

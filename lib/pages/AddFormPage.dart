@@ -142,6 +142,8 @@ void addTransaksi(Akun akun) async {
       'status': 'Posted', // posted, process, done
       'tanggal': timestamp,
       'maps': maps,
+      'like': 0,
+      'likedBy' : []
     }).catchError((e) {
       throw e;
     });

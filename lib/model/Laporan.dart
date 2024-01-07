@@ -1,7 +1,7 @@
 class Laporan {
   final String uid;
   final String docId;
-
+  int like;
   final String judul;
   final String instansi;
   String? deskripsi;
@@ -11,11 +11,13 @@ class Laporan {
   final DateTime tanggal;
   final String maps;
   List<Komentar>? komentar;
+  List? likedBy;
 
   Laporan({
     required this.uid,
     required this.docId,
     required this.judul,
+    required this.like,
     required this.instansi,
     this.deskripsi,
     this.gambar,
@@ -24,7 +26,11 @@ class Laporan {
     required this.tanggal,
     required this.maps,
     this.komentar,
+    this.likedBy
   });
+  void incrementLike() {
+    like++;
+  }
 }
 
 class Komentar {
@@ -35,4 +41,5 @@ class Komentar {
     required this.nama,
     required this.isi,
   });
+
 }
